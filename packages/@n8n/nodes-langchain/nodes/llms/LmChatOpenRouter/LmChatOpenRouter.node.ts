@@ -264,16 +264,22 @@ export class LmChatOpenRouter implements INodeType {
 			},
 		};
 
-		// Prepare model kwargs with response format and reasoning effort
-		const modelKwargs: Record<string, any> = {};
+		// Extra options to send to OpenRouter, that are not directly supported by LangChain
+		const modelKwargs: {
+			response_format?: object;
+			reasoning_effort?: 'low' | 'medium' | 'high' | 'minimal';
+		} = {};
 
 		// Add response format if specified
 		if (options.responseFormat) {
 			modelKwargs.response_format = { type: options.responseFormat };
 		}
 
-		// Add reasoning effort if specified
-		if (options.reasoningEffort) {
+		// Add reasoning effort if specified and valid
+		if (
+			options.reasoningEffort &&
+			['low', 'medium', 'high', 'minimal'].includes(options.reasoningEffort)
+		) {
 			modelKwargs.reasoning_effort = options.reasoningEffort;
 		}
 

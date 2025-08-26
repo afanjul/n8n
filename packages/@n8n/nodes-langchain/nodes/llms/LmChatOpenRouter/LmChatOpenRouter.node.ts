@@ -204,6 +204,37 @@ export class LmChatOpenRouter implements INodeType {
 							'Controls diversity via nucleus sampling: 0.5 means half of all likelihood-weighted options are considered. We generally recommend altering this or temperature but not both.',
 						type: 'number',
 					},
+					{
+						displayName: 'Reasoning Effort Level',
+						name: 'reasoningEffort',
+						default: 'low',
+						type: 'options',
+						description:
+							'Controls the amount of reasoning effort the model should use. Higher effort may improve reasoning but increase response time and cost.',
+						options: [
+							{
+								name: 'Minimal',
+								value: 'minimal',
+								description:
+									'Minimal reasoning effort for much faster responses (only available on GPT-5)',
+							},
+							{
+								name: 'Low',
+								value: 'low',
+								description: 'Low reasoning effort for faster responses',
+							},
+							{
+								name: 'Medium',
+								value: 'medium',
+								description: 'Balanced reasoning effort (default)',
+							},
+							{
+								name: 'High',
+								value: 'high',
+								description: 'Maximum reasoning effort for complex tasks',
+							},
+						],
+					},
 				],
 			},
 		],
@@ -223,6 +254,7 @@ export class LmChatOpenRouter implements INodeType {
 			temperature?: number;
 			topP?: number;
 			responseFormat?: 'text' | 'json_object';
+			reasoningEffort?: 'low' | 'medium' | 'high' | 'minimal';
 		};
 
 		const configuration: ClientOptions = {
@@ -232,6 +264,19 @@ export class LmChatOpenRouter implements INodeType {
 			},
 		};
 
+		// Prepare model kwargs with response format and reasoning effort
+		const modelKwargs: Record<string, any> = {};
+
+		// Add response format if specified
+		if (options.responseFormat) {
+			modelKwargs.response_format = { type: options.responseFormat };
+		}
+
+		// Add reasoning effort if specified
+		if (options.reasoningEffort) {
+			modelKwargs.reasoning_effort = options.reasoningEffort;
+		}
+
 		const model = new ChatOpenAI({
 			apiKey: credentials.apiKey,
 			model: modelName,
@@ -240,11 +285,7 @@ export class LmChatOpenRouter implements INodeType {
 			maxRetries: options.maxRetries ?? 2,
 			configuration,
 			callbacks: [new N8nLlmTracing(this)],
-			modelKwargs: options.responseFormat
-				? {
-						response_format: { type: options.responseFormat },
-					}
-				: undefined,
+			modelKwargs: Object.keys(modelKwargs).length > 0 ? modelKwargs : undefined,
 			onFailedAttempt: makeN8nLlmFailedAttemptHandler(this, openAiFailedAttemptHandler),
 		});
 
